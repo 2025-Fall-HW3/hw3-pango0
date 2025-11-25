@@ -62,7 +62,8 @@ class EqualWeightPortfolio:
         """
         TODO: Complete Task 1 Below
         """
-
+        self.portfolio_weights[assets] = 1 / len(assets)
+        # print(self.portfolio_weights)
         """
         TODO: Complete Task 1 Above
         """
@@ -113,8 +114,18 @@ class RiskParityPortfolio:
         """
         TODO: Complete Task 2 Below
         """
+        for i in range(self.lookback + 1, len(df)):
+            # Use past `lookback` days of returns for the selected assets
+            window_returns = df_returns[assets].iloc[i - self.lookback : i]
 
+            # Compute asset volatilities over the window
+            vol = window_returns.std()
 
+            # Inverse-volatility weights
+            inv_vol = 1 / vol
+            weights = inv_vol / inv_vol.sum()
+
+            self.portfolio_weights.loc[df.index[i], assets] = weights.values
 
         """
         TODO: Complete Task 2 Above
@@ -187,11 +198,17 @@ class MeanVariancePortfolio:
                 """
                 TODO: Complete Task 3 Below
                 """
+                # Decision variables: asset weights (long-only, no leverage)
+                w = model.addMVar(n, name="w")
 
-                # Sample Code: Initialize Decision w and the Objective
-                # NOTE: You can modify the following code
-                w = model.addMVar(n, name="w", ub=1)
-                model.setObjective(w.sum(), gp.GRB.MAXIMIZE)
+                # maximize w^T mu - gamma / 2 * w^T Sigma w
+                exp_ret = w @ mu
+                quad_risk = w @ Sigma @ w
+                formula = exp_ret - gamma / 2 * quad_risk
+                model.setObjective(formula, gp.GRB.MAXIMIZE)
+
+                # # Fully invested portfolio: weights sum to 1
+                model.addConstr(w.sum() == 1, name="budget")
 
                 """
                 TODO: Complete Task 3 Above
